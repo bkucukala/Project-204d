@@ -1,0 +1,66 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: |
+  This project aims to deploy the Phonebook Application web application with Docker Swarm on Elastic Compute Cloud (EC2) Instances by pulling the app images from the AWS Elastic Container Registry (ECR) repository
+  
+Parameters:
+  KeyPairName:
+    Description:  Enter The name of your Key Pair for SSH Connections.
+    Type: AWS::EC2::KeyPair::KeyName
+    Default: Must be one of the existing EC2 KeyPair
+Resources:
+#Define Security Group 
+  DockerSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: "Enable SSH,HTTP and ports For Docker Machines" # Required
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+# *****  CREATING LAUNCH TEMPLATES *******
+#Launch Template Grand Master
+
+#Launch Template Docker Swarm Worker
+  WorkerLT:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateData:
+        ImageId: ami-0ab4d1e9cf9a1215a
+        InstanceType: t2.micro
+        KeyName: !Ref KeyPairName
+        SecurityGroupIds: 
+          - !GetAtt DockerSG.GroupId
+        UserData: !Base64 |
+          #! /bin/bash
+          mkdir -p /home/ec2-user/launchtemplate
+
+# *****  CREATING LAUNCH TEMPLATES *******
+#Launch Template Grand Master
+  GrandMaster:
+    Type: AWS::EC2::Instance
+    Properties:
+      LaunchTemplate:
+        LaunchTemplateId: !Ref WorkerLT
+        Version: !GetAtt WorkerLT.LatestVersionNumber
+      Tags:
+        -                        
+          Key: Name
+          Value: !Sub Grand Master  ${AWS::StackName}
+
+  Manager2:
+    Type: AWS::EC2::Instance
+    Properties:
+      LaunchTemplate:
+        LaunchTemplateId: !Ref WorkerLT
+        Version: !GetAtt WorkerLT.LatestVersionNumber
+      UserData: !Base64 |
+          #! /bin/bash
+          mkdir -p /home/ec2-user/Manager2
+      Tags:
+        -                        
+          Key: Name
+          Value: !Sub Manager-2  ${AWS::StackName}
+
+
+          
